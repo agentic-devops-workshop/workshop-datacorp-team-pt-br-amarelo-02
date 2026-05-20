@@ -5,6 +5,7 @@ model: claude-opus-4-7
 tools:
   - codebase
   - search
+  - editFiles
   - fetch
 ---
 

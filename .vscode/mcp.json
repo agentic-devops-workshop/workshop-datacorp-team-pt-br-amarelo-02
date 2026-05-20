@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "github-enterprise": {
+      "description": "Org policies"
+    },
+    "azure-monitor": {
+      "description": "Production health"
+    },
+    "github-copilot": {
+      "description": "Code completions"
+    },
+    "azure-app-insights": {
+      "description": "Production debugging"
+    }
+  }
+}

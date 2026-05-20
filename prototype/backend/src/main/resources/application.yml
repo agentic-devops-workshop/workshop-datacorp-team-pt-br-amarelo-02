@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: sifap-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5434/sifap
+    username: sifap
+    password: sifap_local
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+server:
+  port: 8080
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+sifap:
+  jwt:
+    secret: ${SIFAP_JWT_SECRET:dev-secret-key-must-be-at-least-32-chars!!}
+    expiration-ms: 900000
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres:5432/sifap
