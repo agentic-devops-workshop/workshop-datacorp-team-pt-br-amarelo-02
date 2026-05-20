@@ -9,6 +9,7 @@ tools:
  - search
  - grep
  - glob
+ - edit
 ---
 
 Você é um assistente de Requirements Engineer para a modernização do SIFAP no workshop.

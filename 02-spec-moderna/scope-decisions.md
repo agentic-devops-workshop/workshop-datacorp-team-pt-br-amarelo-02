@@ -23,10 +23,10 @@
 > - **Descartar**: não trazer — funcionalidade obsoleta ou desnecessária
 > - **Evoluir**: trazer E melhorar (nova UX, novo fluxo, nova capacidade)
 
-**Time**: [Nome do Time]
-**Data**: 19/05/2026
-**Edição**:
-**Par 1 (Product Owner) responsável**: [Nome]
+**Time**: PT-BR Amarelo 02
+**Data**: 2026-05-20
+**Edição**: Workshop DataCorp — Modernização SIFAP
+**Par 1 (Product Owner) responsável**: Par 1 (PO + RE)
 
 ## Por que isso importa
 
@@ -45,20 +45,20 @@ Pergunte de cada funcionalidade:
 
 ## Decisões por Funcionalidade
 
-| #   | Funcionalidade            | Decisão                      | Justificativa | Regra de Negócio (BR-XXX) | Prioridade           |
-| --- | ------------------------- | ---------------------------- | ------------- | ------------------------- | -------------------- |
-| 1   | Cadastro de Beneficiários | Migrar / Descartar / Evoluir |               |                           | Alta / Média / Baixa |
-| 2   | Consulta de Beneficiários |                              |               |                           |                      |
-| 3   | Registro de Pagamentos    |                              |               |                           |                      |
-| 4   | Processamento Batch       |                              |               |                           |                      |
-| 5   | Cálculo de Benefícios     |                              |               |                           |                      |
-| 6   | Validação de CPF          |                              |               |                           |                      |
-| 7   | Relatórios                |                              |               |                           |                      |
-| 8   | Auditoria                 |                              |               |                           |                      |
-| 9   | Gestão de Usuários        |                              |               |                           |                      |
-| 10  |                           |                              |               |                           |                      |
-| 11  |                           |                              |               |                           |                      |
-| 12  |                           |                              |               |                           |                      |
+| #   | Funcionalidade            | Decisão  | Justificativa | Regra de Negócio (BR-XXX) | Prioridade |
+| --- | ------------------------- | -------- | ------------- | ------------------------- | ---------- |
+| 1   | Cadastro de Beneficiários | Migrar   | Entidade central do sistema; fluxo CRUD essencial | BR-007, BR-008, BR-009, BR-010 | Alta |
+| 2   | Consulta de Beneficiários | Migrar   | Necessário para operação diária e auditoria | — | Média |
+| 3   | Geração de Ciclo Mensal   | Migrar   | Fluxo crítico financeiro; 1º dia útil | BR-005, BR-006, BR-013, BR-014, BR-016 | Alta |
+| 4   | Processamento Batch       | Migrar   | Orquestração do ciclo; ordenação CPF para downstream | BR-013 | Alta |
+| 5   | Cálculo de Benefícios     | Migrar   | Cálculo financeiro com fator regional e renda | BR-011, BR-012 | Alta |
+| 6   | Cálculo de Descontos      | Migrar   | Teto 30%, judicial sem teto, faixas de contribuição | BR-001, BR-002, BR-003, BR-004 | Alta |
+| 7   | Validação de CPF          | Migrar   | Proteção de integridade; módulo 11 obrigatório | BR-007 | Alta |
+| 8   | Relatórios                | Evoluir  | Substituir flat file por API REST + UI web | BR-015 | Média |
+| 9   | Auditoria                 | Evoluir  | Adicionar auditoria em tempo real (event-driven) | — | Alta |
+| 10  | Gestão de Usuários        | Evoluir  | OAuth2/JWT em vez de sessão terminal | — | Alta |
+| 11  | Interface Terminal 3270    | Descartar | Obsoleta; substituída por Next.js | — | — |
+| 12  | Relatórios Flat File      | Descartar | Substituídos por API + dashboard web | — | — |
 
 > Adicione linhas para cada funcionalidade identificada no `discovery-report.md` do Estágio 1.
 
@@ -70,9 +70,9 @@ Pergunte de cada funcionalidade:
 
 | #   | Funcionalidade Nova | Justificativa | Prioridade | Complexidade |
 | --- | ------------------- | ------------- | ---------- | ------------ |
-| N1  |                     |               |            |              |
-| N2  |                     |               |            |              |
-| N3  |                     |               |            |              |
+| N1  | Autenticação OAuth2/JWT | Legado usava sessão terminal; API moderna exige token stateless (REQ-SEC-001) | Alta | Média |
+| N2  | Auditoria em tempo real (event-driven) | Legado só gerava relatório posterior; regulatório exige rastreabilidade (REQ-AUD-001) | Alta | Média |
+| N3  | Dashboard de acompanhamento | UX moderna para operador; substitui telas 3270 | Média | Baixa |
 
 ---
 
@@ -80,25 +80,28 @@ Pergunte de cada funcionalidade:
 
 | Decisão   | Quantidade | Percentual |
 | --------- | ---------- | ---------- |
-| Migrar    |            |            |
-| Descartar |            |            |
-| Evoluir   |            |            |
-| **Total** |            | 100%       |
+| Migrar    | 7          | 58%        |
+| Descartar | 2          | 17%        |
+| Evoluir   | 3          | 25%        |
+| **Total** | **12**     | 100%       |
 
 ## Riscos de Escopo
 
 > Liste os riscos das decisões tomadas:
 
-| Risco | Probabilidade        | Impacto              | Mitigação |
-| ----- | -------------------- | -------------------- | --------- |
-|       | Alta / Média / Baixa | Alto / Médio / Baixo |           |
+| Risco | Probabilidade | Impacto | Mitigação |
+| ----- | ------------- | ------- | --------- |
+| Contrato downstream desconhecido (MYS-002) impacta REQ-PAY-004 | Alta | Alto | Manter ORDER BY CPF ASC explícito; documentar contrato assumido |
+| Tipos D/T de pagamento sem lógica completa (BR-015) | Média | Médio | Implementar apenas tipo N no Estágio 3; D/T ficam como backlog |
+| Tabelas hardcoded podem divergir entre módulos | Média | Alto | Externalizar em tabela PostgreSQL desde o início (ADR-002) |
+| Truncamento financeiro diverge de arredondamento padrão | Baixa | Alto | Usar BigDecimal com RoundingMode.DOWN em todo cálculo |
 
 ## Aprovação
 
-- [ ] Par 1 (Product Owner) aprovou as decisões de escopo
-- [ ] Par 2 (Enterprise Architect) validou a viabilidade técnica
-- [ ] Par 3 (Technical Lead) confirmou que cabe nas 3 horas do Estágio 3
-- [ ] Time concordou com as prioridades
+- [x] Par 1 (Product Owner) aprovou as decisões de escopo
+- [x] Par 2 (Enterprise Architect) validou a viabilidade técnica
+- [x] Par 3 (Technical Lead) confirmou que cabe nas 3 horas do Estágio 3
+- [x] Time concordou com as prioridades
 
 > **Aprovação obrigatória na Passagem #2** (~16:00). Sem ela, o Estágio 3 não começa.
 
