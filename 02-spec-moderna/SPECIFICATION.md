@@ -3,7 +3,7 @@
 **Time**: PT-BR Amarelo 02
 **Data**: 2026-05-20
 **Versão**: 1.0
-**Status**: Em revisão — aguardando sign-off do Par 1 (PO)
+**Status**: ✅ Aprovada — sign-off do Par 1 (PO) em 2026-05-20
 
 ---
 

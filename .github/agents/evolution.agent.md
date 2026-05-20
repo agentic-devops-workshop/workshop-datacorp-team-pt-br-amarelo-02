@@ -6,6 +6,7 @@ tools:
   - codebase
   - search
   - editFiles
+  - runCommands
   - fetch
   - githubRepo
 ---
