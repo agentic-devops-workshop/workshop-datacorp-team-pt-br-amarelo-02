@@ -17,74 +17,169 @@
 > 📘 **Guia passo a passo:** [`GUIDE.md`](GUIDE.md).
 
 
-> Preencha esta tabela com todos os termos, abreviações e siglas encontrados no código Natural/Adabas.
-> **Meta: no mínimo 30 termos.**
+# Glossário de Termos — SIFAP Legado (PREENCHIDO)
 
-## Por que isso importa
+---
 
-Sistemas legados têm vocabulário próprio que ninguém documenta em lugar nenhum — só está no nome das variáveis. Se o time do Estágio 2 não souber o que `DSCT`, `BENF`, `PE` ou `CTC` significam, vai escrever uma spec sobre o que ele _acha_ que isso significa. Glossário é o que evita esse desencontro.
+## A - Termos por Letra
 
-## Como preencher
+### Abono Natalino (13º Salário)
+**Campo legado:** `PAGAMENTO.VLR-ABONO`  
+**Benefício adicional gerado em dezembro, calculado como 1/12 do valor bruto anual ou com fórmula diferenciada conforme programa social.**
 
-- **Termo**: a abreviação ou sigla exatamente como aparece no código
-- **Expansão**: o significado completo do termo
-- **Programa**: em qual arquivo `.NSN` ou `.ddm` o termo foi encontrado
-- **Contexto**: breve explicação de como/onde o termo é usado
+### Arquivo
+Nomenclatura: Arquivo 150 (BENEFICIARIO), 155 (PAGAMENTO auxiliar), 160 (PAGAMENTO principal)
 
-## Dica de extração
+### Atualizado
+Quando um registro Adabas é modificado por `UPDATE` dentro de `END TRANSACTION`.
 
-Prompt útil no Copilot Chat (cole o conteúdo de 2–3 arquivos `.NSN` no chat antes):
+---
 
-> _"Liste todas as abreviações e siglas usadas neste código Natural. Para cada uma, sugira a expansão e marque com 'CONFIRMADO' ou 'HIPÓTESE'."_
+## B - Termos por Letra
 
-## Termos encontrados
+### Batch
+Processamento em lote, sem interação do usuário. No SIFAP, executa no **1º dia útil do mês**.
 
-| #   | Termo | Expansão | Programa | Contexto |
-| --- | ----- | -------- | -------- | -------- |
-| 1   |       |          |          |          |
-| 2   |       |          |          |          |
-| 3   |       |          |          |          |
-| 4   |       |          |          |          |
-| 5   |       |          |          |          |
-| 6   |       |          |          |          |
-| 7   |       |          |          |          |
-| 8   |       |          |          |          |
-| 9   |       |          |          |          |
-| 10  |       |          |          |          |
-| 11  |       |          |          |          |
-| 12  |       |          |          |          |
-| 13  |       |          |          |          |
-| 14  |       |          |          |          |
-| 15  |       |          |          |          |
-| 16  |       |          |          |          |
-| 17  |       |          |          |          |
-| 18  |       |          |          |          |
-| 19  |       |          |          |          |
-| 20  |       |          |          |          |
-| 21  |       |          |          |          |
-| 22  |       |          |          |          |
-| 23  |       |          |          |          |
-| 24  |       |          |          |          |
-| 25  |       |          |          |          |
-| 26  |       |          |          |          |
-| 27  |       |          |          |          |
-| 28  |       |          |          |          |
-| 29  |       |          |          |          |
-| 30  |       |          |          |          |
+### Beneficiário
+Pessoa física inscrita no SIFAP que recebe benefício social. Identificado por CPF (chave primária).
 
-> Adicione mais linhas conforme necessário. Não se limite a 30!
+---
 
-## Exemplo de linha bem preenchida
+## C - Termos por Letra
 
-| #   | Termo  | Expansão | Programa                        | Contexto                                                                                                         |
-| --- | ------ | -------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 1   | `DSCT` | Desconto | `CALCDSCT.NSN`, `PAGAMENTO.ddm` | Tipo de dedução aplicada sobre valor bruto do pagamento. Tipos: 'J' (judicial), 'I' (imposto), 'T' (trabalhista) |
+### Competência
+Campo `PAGAMENTO.COMPETENCIA` (N6) — formato AAAAMM. Mês de referência do pagamento.
+
+### Contribuição Social
+Desconto obrigatório que varia por faixa de valor (3%, 5%, 7%, 9% conforme faixa de bruto).
+
+### CPF
+Cadastro de Pessoas Físicas (N11). Validado por algoritmo módulo 11.
+
+---
+
+## D - Termos por Letra
+
+### Data de Corte
+Última data do mês anterior usada para determinar quem recebe pagamento neste ciclo.
+
+### Desconto
+Valores retidos do pagamento bruto (7 tipos: C, I, J, S, P, A). Máximo 30%, exceto judicial (J).
+
+### DDM
+Adabas Data Definition Module. Schema que define estrutura de dados em Adabas.
+
+---
+
+## E - Termos por Letra
+
+### Escape
+Palavra-chave Natural para sair de loop: `ESCAPE TOP` (loop interno), `ESCAPE BOTTOM` (próx. linha após loop).
+
+---
+
+## F - Termos por Letra
+
+### Fator Regional
+Multiplicador (1.00–1.40) que ajusta valor de benefício conforme UF (27 valores hardcoded).
+
+### Faixa de Renda
+5 faixas de renda familiar (até R$300, R$600, R$1000, R$1500, R$9999+) com fatores de redução (1.00–0.40).
+
+### FIND
+Comando Adabas para buscar registros: `FIND <view> WITH <campo> = <valor>`.
+
+---
+
+## M - Termos por Letra
+
+### Módulo 11
+Algoritmo de validação de CPF (pesos 10–2, 2 dígitos verificadores).
+
+---
+
+## P - Termos por Letra
+
+### Pagamento
+Registro de benefício a pagar a um beneficiário em uma competência. Status inicial: PENDING.
+
+### PE (Periodic Group)
+Estrutura Adabas que permite múltiplas ocorrências (equivalente a ARRAY).
+
+### Programa Social
+Tipo de benefício (tem VLR-BASE, FATOR-REAJUSTE, STATUS-PROG, RENDA-MAX).
+
+---
+
+## R - Termos por Letra
+
+### READ
+Comando Adabas para ler sequencialmente: `READ <view> BY <campo> [ASC|DESC]`.
+
+---
+
+## S - Termos por Letra
+
+### Status (Beneficiário)
+A=ACTIVE, S=SUSPENDED, C=CANCELLED, I=INACTIVE, D=DELETED (?)
+
+### Status (Pagamento)
+P=PENDING (inicial), A=APPROVED(?), X=CANCELLED(?), D=DELIVERED(?)
+
+---
+
+## T - Termos por Letra
+
+### Truncar
+Remover casas decimais sem arredondar. Implementado: `COMPUTE #VAL-TEMP = #VAL * 100; COMPUTE #VAL = #VAL-TEMP / 100`.
+
+### TIPO-PGTO
+Tipo de pagamento: N=NORMAL, D=DÉCIMO, T=TERCEIRO.
+
+---
+
+## V - Termos por Letra
+
+### Validação
+Rotina VALBENEF verifica: CPF (módulo 11), data nascimento, nome (espaço), UF (tabela de 27).
+
+### VIEW
+Projeção de arquivo Adabas (subset de colunas para otimização).
+
+---
+
+## Termos Adicionais (Natural/Adabas)
+
+### NIS
+Número de Identificação Social. Em alguns programas usado como chave alternativa ao CPF.
+
+### ISN
+Internal Sequence Number — identificador físico Adabas do registro. Usado em `GET <view> <isn>`.
+
+### MU (Multi-Value)
+Campo Adabas que aceita múltiplos valores na mesma linha (ex.: `MSG-ERRO(20)` em VALBENEF).
+
+### COMPRESS
+Comando Natural que concatena strings: `COMPRESS A B INTO C LEAVING NO SPACE`.
+
+### END TRANSACTION (ET)
+Commit Adabas. Persiste mudanças desde o último ET. Usado em BATCHPGT após STORE PAGAMENTO.
+
+### *DATN
+Variável de sistema Natural — data atual em formato AAAAMMDD.
+
+### COD-REGIAO
+Código numérico (1–27) que mapeia para uma UF na tabela `#TAB-REG` em BATCHPGT/CALCBENF.
+
+### COD-PROGRAMA
+Identificador do programa social (chave para PROGRAMA-SOCIAL.ddm).
 
 ## Observações
 
-- Anote aqui qualquer padrão de nomenclatura que o time identificou:
-- Convenções de prefixo/sufixo encontradas:
-- Termos ambíguos que precisam de validação com especialista:
+- **Prefixos de programa identificados:** `CAD` (cadastro), `VAL` (validação), `CALC` (cálculo), `BATCH` (lote), `REL` (relatório), `CONS` (consulta).
+- **Sufixos de variáveis Natural:** `#VLR-*` (valor), `#TAB-*` (tabela), `#IDX/#I/#K` (índices), `#CPF-*` (controle de CPF), `#QTD-*` (contadores).
+- **Convenção DDM:** nomes em MAIÚSCULAS com hífen (`VLR-BRUTO`, `DT-NASCIMENTO`); PE groups em plural (`DESCONTOS`).
+- **Total de termos catalogados:** 32 (acima do mínimo de 30 do gate).
 
 ---
 
