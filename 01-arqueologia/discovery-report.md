@@ -20,19 +20,16 @@
 > Este documento consolida todas as descobertas do Estágio 1.
 > Preencha cada seção com as conclusões do time. **Este é o input principal do Estágio 2** — sem ele, a especificação vira chute.
 
-**Time**: [Nome do Time]
-**Data**: 19/05/2026
-**Edição**:
-**Participantes**: [Liste os membros e suas personas]
+**Time**: PT-BR Amarelo 02
+**Data**: 20/05/2026
+**Edição**: Workshop DataCorp — Modernização SIFAP
+**Participantes**: 5 pares (PO+RE, EA+SA, TL+Dev, DBA+QA, DevOps+TW)
 
 ---
 
 ## 1. Sumário Executivo
 
-> Em 3 a 5 frases, resuma o que o time descobriu sobre o SIFAP legado.
-> O que é este sistema? Qual sua criticidade? Qual o estado do código?
-
-[Escreva aqui]
+O **SIFAP** (Sistema de Fiscalização e Administração de Pagamentos) é um sistema financeiro crítico que processa pagamentos mensais de benefícios sociais, em Natural/Adabas desde 1997, com batch executado no **1º dia útil do mês** gerando dezenas de milhares de registros. O código é bem comentado e tem histórico de alterações rastreável (1997–2015), mas é **altamente acoplado**: tabelas de fatores regionais (27 UFs), faixas de renda (5) e alíquotas (4) estão hardcoded em múltiplos programas. A criticidade é **alta** — qualquer erro de cálculo causa prejuízo direto ao beneficiário. A modernização exigirá externalizar configuração, clarificar contratos com sistemas downstream e implementar auditoria robusta em tempo real.
 
 ---
 
@@ -40,49 +37,71 @@
 
 ### 2.1 Propósito do SIFAP
 
-[Descreva o que o sistema faz com base na análise do código]
+Sistema que **calcula, valida, registra e audita** pagamentos de benefícios sociais mensalmente.
+
+- **Entrada:** Beneficiários cadastrados (CPF, renda familiar, região, dependentes, programa social).
+- **Processamento:** Batch mensal → para cada beneficiário ACTIVE calcula valor bruto (fator regional × fator familiar × fator renda × fator idade × reajuste) → aplica descontos (contrib social, judicial, sindical, imposto, pensão, administrativo) com teto de 30% (exceto judicial).
+- **Saída:** Registros de pagamento com status PENDING para processamento por sistemas downstream (TEF/SIAFI presumido).
+- **Criticidade:** 🔴 CRÍTICA — integrado com sistemas financeiros federais.
 
 ### 2.2 Arquitetura Legada
 
-[Descreva a arquitetura: quantos programas, DDMs, fluxos principais]
+- **Linguagem:** Natural (procedural, mainframe-style).
+- **Base de dados:** Adabas (DDM-based) — 4 arquivos: BENEFICIARIO, PAGAMENTO, PROGRAMA-SOCIAL, AUDITORIA.
+- **15 programas Natural** organizados em 5 famílias funcionais:
+  - **Batch:** BATCHPGT, BATCHCON, BATCHREL
+  - **Cálculo:** CALCBENF, CALCDSCT, CALCCORR
+  - **Cadastro:** CADBENEF, CADPROG, CADDEPEND
+  - **Validação:** VALBENEF, VALDOCS, VALELEG
+  - **Consulta/Relatório:** CONSBENF, RELPGT, RELAUDIT
+- **Fluxo crítico:** `Scheduler → BATCHPGT → CALCBENF → CALCDSCT → STORE PAGAMENTO`.
 
 ### 2.3 Usuários e Perfis
 
-[Quem usa o sistema? Quais perfis de acesso existem?]
+| Programa  | Usuário              | Perfil           | Frequência          |
+| --------- | -------------------- | ---------------- | ------------------- |
+| BATCHPGT  | Scheduler/DBA        | Automatizado     | Mensal (1º dia útil)|
+| CADBENEF  | Operador             | Entrada manual   | Ad-hoc              |
+| CONSBENF  | Consultor/Auditoria  | Leitura          | Ad-hoc              |
+| RELPGT    | Gestor/CFO           | Leitura          | Mensal              |
+| RELAUDIT  | Auditor Interno      | Leitura          | Mensal/quinzenal    |
 
 ---
 
 ## 3. Principais Descobertas
 
-### 3.1 Regras de Negócio Críticas
+### 3.1 Regras de Negócio Críticas (TOP 5 — ver catálogo completo)
 
-> Liste as 5 regras de negócio mais importantes encontradas.
-
-1. [Regra + referência ao catálogo BR-XXX]
-2.
-3.
-4.
-5.
+1. **BR-001** — Teto de descontos não-judiciais em 30% (`CALCDSCT.NSN#L142-L148`).
+2. **BR-002** — Desconto judicial sem teto (`CALCDSCT.NSN#L156-L160`).
+3. **BR-004** — Contribuição social por faixa de valor — 4 alíquotas (`CALCDSCT.NSN#L45-L60`).
+4. **BR-005 + BR-013** — Geração mensal ordenada por CPF; downstream depende da ordem (`BATCHPGT.NSN#L88-L202`).
+5. **BR-007** — Validação de CPF módulo 11 com exceção para CPFs `000...` de teste (`VALBENEF.NSN#L114-L135`).
 
 ### 3.2 Dependências Complexas
 
-> Quais programas estão mais acoplados? Onde há risco de efeito cascata?
-
-[Descreva]
+- **Cadeia síncrona:** `BATCHPGT → CALCBENF → CALCDSCT` — falha de qualquer um aborta o ciclo.
+- **Tabelas hardcoded duplicadas:** `#TAB-REG(27)` e `#FAIXA-RENDA(5)` aparecem idênticas em BATCHPGT e CALCBENF (risco de divergência).
+- **Ordem CPF acoplada a downstream:** mencionada explicitamente em comentário, sem documentação de quem consome.
+- **PE Group (`DESCONTOS`)** em BENEFICIARIO — loop multi-valor com 6 tipos de desconto, lógica complexa de vigência e teto.
 
 ### 3.3 Dívida Técnica Identificada
 
-> Que problemas no código legado vão complicar a migração?
-
-- [ ] [Problema 1]
-- [ ] [Problema 2]
-- [ ] [Problema 3]
+- [x] **Hardcoding de tabelas** — fator regional, faixas de renda e alíquotas exigem recompilação para mudar.
+- [x] **Truncamento manual** — `COMPUTE #VLR-TEMP = X * 100; COMPUTE X = #VLR-TEMP / 100` em vez de função ROUND/TRUNC nativa.
+- [x] **Duplicação de inicialização** — TAB-REG aparece em ≥2 programas.
+- [x] **Sem auditoria em tempo real visível** — RELAUDIT existe mas lógica não analisada.
+- [x] **Contrato downstream não documentado** — comentário diz "sistemas downstream dependem" sem listar quais.
+- [x] **Sem testes automatizados** — qualquer mudança exige bateria manual.
+- [x] **Tipos D/T de pagamento parcialmente implementados** — `TIPO-PGTO='D'` no schema, lógica de 13º incompleta em CALCBENF.
 
 ### 3.4 Gaps de Documentação
 
-> O que a documentação existente NÃO cobre?
-
-[Descreva]
+- Máquina de estados do pagamento (PENDING → ? → DELIVERED) não documentada.
+- Fluxo de cancelamento e estorno de pagamento ausente.
+- CALCCORR.NSN (correção) não analisado em profundidade.
+- Soft vs hard delete (status `D`) não esclarecido.
+- Formato/SLA do contrato com sistemas downstream desconhecido.
 
 ---
 
@@ -90,19 +109,26 @@
 
 ### 4.1 Mistérios Não Resolvidos
 
-> Resuma os mistérios do arquivo `mysteries-found.md` que permanecem sem explicação.
-
-| ID  | Descrição | Risco para Migração |
-| --- | --------- | ------------------- |
-|     |           |                     |
+| ID      | Descrição                                                       | Risco para Migração |
+| ------- | --------------------------------------------------------------- | ------------------- |
+| MYS-001 | 27 UFs — qual está na posição 27? DF ou duplicação?             | MÉDIO               |
+| MYS-002 | "Sistemas downstream dependem desta ordenação" — quais?         | 🔴 CRÍTICO          |
+| MYS-003 | TIPO-PGTO `D` (Décimo) e `T` (Terceiro) — lógica completa onde? | ALTO                |
+| MYS-004 | Truncamento manual em vez de ROUND — intencional?               | MÉDIO               |
+| MYS-005 | `#VLR-TEMP (N11)` integer em cálculo financeiro — overflow?     | MÉDIO               |
+| MYS-006 | RELAUDIT.NSN — onde está a lógica de auditoria?                 | 🔴 CRÍTICO          |
+| MYS-007 | Fevereiro com 29 dias hardcoded — sempre bissexto?              | BAIXO               |
+| MYS-008 | Tipo `C` (contrib) vs `I` (imposto) — diferença prática?        | ALTO                |
+| MYS-009 | `NUM-DEPENDENTES` cadastrado mas uso parcial no cálculo         | ALTO                |
+| MYS-010 | Status `D` (deleted) — soft delete ou hard delete?              | MÉDIO               |
 
 ### 4.2 Riscos para o Estágio 2
 
-> O que o time de especificação precisa saber antes de começar?
-
-1. [Risco 1]
-2. [Risco 2]
-3. [Risco 3]
+1. **🔴 Sistemas downstream não identificados** — sem contrato claro, EARS de batch ficam incompletas.
+2. **🔴 11 programas ainda não lidos em profundidade** — CALCCORR, RELAUDIT, BATCHCON, BATCHREL podem conter regras críticas.
+3. **🟡 Tabelas hardcoded** — manter hardcoded em Java perpetua a dívida; externalizar exige decisão arquitetural (config service vs banco).
+4. **🟡 Ordem CPF** — em PostgreSQL, sem `ORDER BY` explícito a ordem não é garantida; precisa ADR.
+5. **🟡 Truncamento financeiro** — `BigDecimal` em Java com `RoundingMode.DOWN` é mandatório; documentar em EARS.
 
 ---
 
@@ -110,48 +136,53 @@
 
 ### 5.1 O que migrar primeiro
 
-> Com base na priorização do Par 1 (Product Owner), quais funcionalidades devem ser migradas primeiro?
-
-| Prioridade | Funcionalidade | Justificativa |
-| ---------- | -------------- | ------------- |
-| 1          |                |               |
-| 2          |                |               |
-| 3          |                |               |
+| Prioridade | Funcionalidade                | Justificativa                                                |
+| ---------- | ----------------------------- | ------------------------------------------------------------ |
+| 1          | Cálculo de benefício (CALCBENF) | Base de tudo; impacto financeiro direto.                    |
+| 2          | Cálculo de descontos (CALCDSCT) | Depende de #1; regra do teto 30% é complexa.                |
+| 3          | Batch de geração (BATCHPGT)     | Orquestra #1 e #2; crítico operacional.                     |
+| 4          | Validação de cadastro (VALBENEF)| Protege integridade; CPF módulo 11 é padrão.                |
+| 5          | Relatório de pagamentos (RELPGT)| Suporte a downstream e auditoria; menos complexo.           |
 
 ### 5.2 O que descartar
 
-> Funcionalidades que provavelmente não precisam ser migradas:
-
-- [Funcionalidade]: [Motivo para descartar]
+- **Terminal 3270 UI** → substituir por Next.js + shadcn/ui.
+- **Relatório em flat file** → API REST + UI web.
+- **Inicialização duplicada de tabelas** → migrar para tabela `social_program_parameters` no PostgreSQL.
 
 ### 5.3 O que evoluir
 
-> Funcionalidades que devem ser migradas E melhoradas:
-
-- [Funcionalidade]: [Como melhorar]
+- **Cálculo de benefício** → adicionar simulação (what-if) e versionamento de parâmetros.
+- **Descontos judiciais** → workflow de aprovação com anexo de processo.
+- **Batch** → retry, circuit breaker, observabilidade real-time, idempotência por competência.
+- **Validação cadastral** → incluir endereço, telefone, elegibilidade cruzada.
+- **Auditoria** → event sourcing em tabela `audit_event` + retenção configurável.
 
 ---
 
 ## 6. Métricas do Estágio
 
-| Métrica                       | Valor        |
-| ----------------------------- | ------------ |
-| Programas analisados          | \_\_\_ / 15  |
-| DDMs mapeados                 | \_\_\_ / 4   |
-| Regras de negócio encontradas | \_\_\_       |
-| Regras escondidas encontradas | \_\_\_ / 10  |
-| Easter eggs encontrados       | \_\_\_ / 3   |
-| Termos no glossário           | \_\_\_       |
-| Mistérios catalogados         | \_\_\_       |
-| Tempo total gasto             | \_\_\_ horas |
+| Métrica                          | Valor                                       |
+| -------------------------------- | ------------------------------------------- |
+| Programas analisados             | 4 / 15 em profundidade + 11 mapeados via dependências |
+| DDMs mapeados                    | 4 / 4 (BENEFICIARIO, PAGAMENTO, PROGRAMA-SOCIAL, AUDITORIA) |
+| Regras de negócio encontradas    | 16                                          |
+| Regras críticas                  | 9                                           |
+| Regras escondidas encontradas    | 6 / 10                                      |
+| Easter eggs encontrados          | 1 / 3 (CPF `000...` de teste em VALBENEF)   |
+| Termos no glossário              | 32                                          |
+| Mistérios catalogados            | 10                                          |
+| Tempo total gasto                | ~4 horas                                    |
 
 ---
 
 ## 7. Notas para o Próximo Estágio
 
-> Deixe aqui mensagens para o time no Estágio 2 (Especificação Moderna):
-
-[Escreva aqui]
+- Antes de escrever EARS, resolver **MYS-002** (downstream) e **MYS-006** (auditoria) — bloqueadores.
+- Toda EARS deve carregar `source_legacy:` apontando para `.NSN` com faixa de linhas (regra do gate).
+- Considerar **ADR-001**: como externalizar tabelas de fatores regionais e faixas de renda (config table no PostgreSQL com versionamento).
+- Considerar **ADR-002**: como garantir ordem CPF no batch moderno (índice + `ORDER BY` explícito + contrato com downstream).
+- Considerar **ADR-003**: `BigDecimal` com `RoundingMode.DOWN` para preservar comportamento de truncamento legado.
 
 ---
 

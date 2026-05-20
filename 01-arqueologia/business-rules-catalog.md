@@ -44,31 +44,26 @@ O que NÃO conta: paginação de relatório, formatação de saída, manipulaç�
 
 ## Regras Encontradas
 
-| ID     | Regra de Negócio | Programa Fonte | Campos DDM | Nível de Risco | Notas |
-| ------ | ---------------- | -------------- | ---------- | -------------- | ----- |
-| BR-001 |                  |                |            |                |       |
-| BR-002 |                  |                |            |                |       |
-| BR-003 |                  |                |            |                |       |
-| BR-004 |                  |                |            |                |       |
-| BR-005 |                  |                |            |                |       |
-| BR-006 |                  |                |            |                |       |
-| BR-007 |                  |                |            |                |       |
-| BR-008 |                  |                |            |                |       |
-| BR-009 |                  |                |            |                |       |
-| BR-010 |                  |                |            |                |       |
-| BR-011 |                  |                |            |                |       |
-| BR-012 |                  |                |            |                |       |
-| BR-013 |                  |                |            |                |       |
-| BR-014 |                  |                |            |                |       |
-| BR-015 |                  |                |            |                |       |
+| ID | Regra de Negócio | Programa Fonte | Campos DDM | Nível de Risco | Notas |
+|---|---|---|---|---|---|
+| BR-001 | Teto de descontos não-judiciais em 30% | CALCDSCT.NSN#L142-L148 | PAGAMENTO.VLR-BRUTO, PAGAMENTO.VLR-DESCONTO | **CRÍTICO** | Tipos C,I,S,P,A têm teto. J (judicial) é isento. |
+| BR-002 | Desconto judicial sem teto | CALCDSCT.NSN#L156-L160 | BENEFICIARIO.DESCONTOS.TIPO-DSCT='J' | **CRÍTICO** | Inclusão 2007. Ordem judicial pode ser até 100%+. |
+| BR-003 | Desconto sindical fixo em 1% | CALCDSCT.NSN#L165 | PAGAMENTO.VLR-BRUTO | **MÉDIO** | Percentual hardcoded (0.01). Não paramétrico. |
+| BR-004 | Contribuição social por faixa de valor | CALCDSCT.NSN#L45-L60 | PAGAMENTO.VLR-BRUTO | **CRÍTICO** | Tabela: até R$500→3%, R$1000→5%, R$2000→7%, >R$2000→9%. |
+| BR-005 | Geração mensal de pagamentos ACTIVE | BATCHPGT.NSN#L88-L142 | BENEFICIARIO.STATUS, BENEFICIARIO.CPF | **CRÍTICO** | 1º dia útil. Só status='A'. Ordem por CPF obrigatória. |
+| BR-006 | Status inicial de pagamento | BATCHPGT.NSN#L156 | PAGAMENTO.STATUS-PGTO | **ALTO** | Todo novo pagamento inicia com status='P' (PENDING). |
+| BR-007 | Validação de CPF com módulo 11 | VALBENEF.NSN#L114-L135 | BENEFICIARIO.CPF | **CRÍTICO** | Rejeita 000.000.000-00 e dígito verificador inválido. |
+| BR-008 | Validação de data de nascimento | VALBENEF.NSN#L143-L160 | BENEFICIARIO.DT-NASCIMENTO | **MÉDIO** | Valida formato AAAAMMDD. Fevereiro com 29 dias (sempre bissexto?). |
+| BR-009 | Validação de nome (nome + sobrenome) | VALBENEF.NSN#L162-L180 | BENEFICIARIO.NOME | **MÉDIO** | Deve conter espaço (separa nome e sobrenome). |
+| BR-010 | Validação de UF | VALBENEF.NSN#L76-L102 | BENEFICIARIO.UF | **MÉDIO** | Tabela de 27 UFs (AC, AL, ..., TO). Rejeita UF fora da tabela. |
+| BR-011 | Fator regional por UF | BATCHPGT.NSN#L138-L165, CALCBENF | BENEFICIARIO.COD-REGIAO | **ALTO** | 27 valores hardcoded (1.35 AC até 1.00 RO/RR). Ajusta VLR-BASE. |
+| BR-012 | Fator de renda por faixa | BATCHPGT.NSN#L167-L177 | BENEFICIARIO.RENDA-FAMILIAR | **ALTO** | 5 faixas: <R$300→1.00, R$300-600→0.85, ..., >R$1500→0.40. Reduz benefício. |
+| BR-013 | Processamento ordenado por CPF | BATCHPGT.NSN#L196-L202 | BENEFICIARIO.CPF | **CRÍTICO** | "SISTEMAS DOWNSTREAM DEPENDEM DESTA ORDENACAO" — quais? |
+| BR-014 | Evitar duplicação na mesma competência | BATCHPGT.NSN#L207-L211 | BENEFICIARIO.CPF, PAGAMENTO.COMPETENCIA | **CRÍTICO** | Compara CPF anterior (#CPF-ANT) para não duplicar. |
+| BR-015 | Tipos de pagamento (N, D, T) | CALCBENF.NSN#L26, BATCHPGT.NSN#L26 | PAGAMENTO.TIPO-PGTO | **ALTO** | N=NORMAL, D=DÉCIMO(?), T=TERCEIRO(?) — lógica não vista. |
+| BR-016 | Data de corte = último dia mês anterior | BATCHPGT.NSN#L180-L190 | BENEFICIARIO.STATUS + data | **CRÍTICO** | Beneficiário deve estar ACTIVE no último dia mês anterior para receber. |
 
-> Adicione mais linhas conforme necessário. Lembre-se: existem **10 regras escondidas** no código!
-
-## Exemplo de linha bem preenchida
-
-| ID     | Regra de Negócio                                                                        | Programa Fonte                                   | Campos DDM                                                               | Nível de Risco | Notas                                      |
-| ------ | --------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ | -------------- | ------------------------------------------ |
-| BR-013 | Desconto total não pode exceder 30% do valor bruto, exceto descontos judiciais (tipo J) | `01-arqueologia/legado-sifap/natural-programs/CALCDSCT.NSN#L142-L148` | `PAGAMENTO.VLR-BRUTO`, `PAGAMENTO.VLR-TOTAL-DSCT`, `PAGAMENTO.TIPO-DSCT` | CRÍTICO        | Regra financeira. Tipo 'J' = exceção legal |
+> 16 regras catalogadas a partir da leitura inicial de 4 programas (BATCHPGT, CALCBENF, CALCDSCT, VALBENEF). Os 11 programas restantes podem revelar regras adicionais (estimativa: 24-30 ao final do mapeamento completo).
 
 ## Regras por Categoria
 
@@ -90,10 +85,10 @@ O que NÃO conta: paginação de relatório, formatação de saída, manipulaç�
 
 ## Resumo Estatístico
 
-- Total de regras encontradas: \_\_\_
-- Regras críticas: \_\_\_
-- Regras com duplicação: \_\_\_
-- Regras sem documentação (escondidas): \_\_\_
+- Total de regras encontradas: **16**
+- Regras críticas: **9** (BR-001, BR-002, BR-004, BR-005, BR-007, BR-013, BR-014, BR-016, ordem CPF)
+- Regras com duplicação: **0** confirmadas (tabelas TAB-REG e FAIXA-RENDA replicadas entre BATCHPGT e CALCBENF — a investigar como duplicação)
+- Regras sem documentação (escondidas): **6** identificadas até agora (BR-003 sindical 1% hardcoded, BR-008 fev=29, BR-011 fatores regionais, BR-012 faixas de renda, BR-013 ordem CPF + downstream, BR-015 tipos D/T parciais)
 
 ---
 

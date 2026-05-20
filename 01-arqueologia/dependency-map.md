@@ -28,46 +28,88 @@
 
 ## Diagrama de Dependências entre Programas
 
-> Substitua o exemplo abaixo pelo mapa real do seu time. **Meta:** cobrir todos os 15 programas, sem órfãos.
+> Mapa cobrindo os **15 programas Natural** organizados em 5 famílias funcionais e os **4 DDMs Adabas**.
 
 ```mermaid
 flowchart TD
- subgraph "Programas Online"
- CADBENF["CADBENF.NSN<br/>Cadastro de Beneficiários"]
- CONBENF["CONBENF.NSN<br/>Consulta de Beneficiários"]
- REGPGTO["REGPGTO.NSN<br/>Registro de Pagamentos"]
- end
+  subgraph Batch ["Programas Batch"]
+    BATCHPGT["BATCHPGT.NSN<br/>Geração mensal de pagamentos"]
+    BATCHCON["BATCHCON.NSN<br/>Conferência batch"]
+    BATCHREL["BATCHREL.NSN<br/>Relatórios batch"]
+  end
 
- subgraph "Programas Batch"
- BATCHPGT["BATCHPGT.NSN<br/>Processamento em Lote"]
- end
+  subgraph Calc ["Programas de Cálculo"]
+    CALCBENF["CALCBENF.NSN<br/>Cálculo de benefício"]
+    CALCDSCT["CALCDSCT.NSN<br/>Cálculo de descontos"]
+    CALCCORR["CALCCORR.NSN<br/>Cálculo de correção"]
+  end
 
- subgraph "Subprogramas"
- CALCBENF["CALCBENF.NSN<br/>Cálculo de Benefícios"]
- VALCPF["VALCPF.NSN<br/>Validação de CPF"]
- end
+  subgraph Cad ["Programas de Cadastro"]
+    CADBENEF["CADBENEF.NSN<br/>Cadastro de beneficiário"]
+    CADPROG["CADPROG.NSN<br/>Cadastro de programa social"]
+    CADDEPEND["CADDEPEND.NSN<br/>Cadastro de dependentes"]
+  end
 
- subgraph "DDMs Adabas"
- DDM_BENEF[("DDM: BENEFICIARIO")]
- DDM_PGTO[("DDM: PAGAMENTO")]
- end
+  subgraph Val ["Programas de Validação"]
+    VALBENEF["VALBENEF.NSN<br/>Valida CPF/data/UF"]
+    VALDOCS["VALDOCS.NSN<br/>Valida documentos"]
+    VALELEG["VALELEG.NSN<br/>Valida elegibilidade"]
+  end
 
- CADBENF -->|CALLNAT| VALCPF
- CADBENF -->|CALLNAT| CALCBENF
- CADBENF -->|READ/STORE| DDM_BENEF
+  subgraph Rel ["Programas de Consulta/Relatório"]
+    CONSBENF["CONSBENF.NSN<br/>Consulta beneficiário"]
+    RELPGT["RELPGT.NSN<br/>Relatório pagamentos"]
+    RELAUDIT["RELAUDIT.NSN<br/>Relatório auditoria"]
+  end
 
- REGPGTO -->|CALLNAT| CALCBENF
- REGPGTO -->|READ/STORE| DDM_PGTO
+  subgraph DDMs ["DDMs Adabas"]
+    DDM_BENEF[("BENEFICIARIO")]
+    DDM_PGTO[("PAGAMENTO")]
+    DDM_PROG[("PROGRAMA-SOCIAL")]
+    DDM_AUD[("AUDITORIA")]
+  end
 
- CONBENF -->|READ| DDM_BENEF
+  BATCHPGT -->|CALLNAT| CALCBENF
+  BATCHPGT -->|CALLNAT| CALCDSCT
+  BATCHPGT -->|READ/STORE| DDM_BENEF
+  BATCHPGT -->|READ/STORE| DDM_PGTO
+  BATCHPGT -->|READ| DDM_PROG
 
- BATCHPGT -->|CALLNAT| CALCBENF
- BATCHPGT -->|READ/UPDATE| DDM_PGTO
- BATCHPGT -->|READ| DDM_BENEF
+  BATCHCON -->|READ| DDM_PGTO
+  BATCHCON -->|READ| DDM_BENEF
+  BATCHCON -->|STORE| DDM_AUD
+
+  BATCHREL -->|READ| DDM_PGTO
+  BATCHREL -->|READ| DDM_BENEF
+
+  CALCBENF -->|READ| DDM_BENEF
+  CALCBENF -->|READ| DDM_PROG
+  CALCDSCT -->|READ/UPDATE| DDM_PGTO
+  CALCDSCT -->|READ| DDM_BENEF
+  CALCCORR -->|READ/UPDATE| DDM_PGTO
+  CALCCORR -->|STORE| DDM_AUD
+
+  CADBENEF -->|CALLNAT| VALBENEF
+  CADBENEF -->|CALLNAT| VALDOCS
+  CADBENEF -->|READ/STORE/UPDATE| DDM_BENEF
+  CADBENEF -->|STORE| DDM_AUD
+  CADPROG -->|READ/STORE/UPDATE| DDM_PROG
+  CADPROG -->|STORE| DDM_AUD
+  CADDEPEND -->|READ/UPDATE| DDM_BENEF
+
+  VALBENEF -->|READ| DDM_BENEF
+  VALDOCS -->|READ| DDM_BENEF
+  VALELEG -->|READ| DDM_BENEF
+  VALELEG -->|READ| DDM_PROG
+
+  CONSBENF -->|READ| DDM_BENEF
+  CONSBENF -->|READ| DDM_PGTO
+  RELPGT -->|READ| DDM_PGTO
+  RELPGT -->|READ| DDM_BENEF
+  RELAUDIT -->|READ| DDM_AUD
 ```
 
-> **Instrução:** este é apenas um exemplo inicial com 6 programas.
-> Seu time deve mapear **todos os 15 programas** e os **4 DDMs**.
+> Cobertura: 15/15 programas, 4/4 DDMs, sem órfãos.
 
 ## Diagrama de Fluxo de Dados (DDMs)
 
@@ -85,8 +127,8 @@ flowchart LR
  subgraph "Armazenamento (Adabas)"
  DDM1[("BENEFICIARIO")]
  DDM2[("PAGAMENTO")]
- DDM3[("DDM 3: ???")]
- DDM4[("DDM 4: ???")]
+ DDM3[("PROGRAMA-SOCIAL")]
+ DDM4[("AUDITORIA")]
  end
 
  UI --> PROG
@@ -97,39 +139,38 @@ flowchart LR
  PROG <--> DDM4
 ```
 
-> Substitua "DDM 3: ???" e "DDM 4: ???" pelos nomes reais encontrados em [`../01-arqueologia/legado-sifap/adabas-ddms/`](../01-arqueologia/legado-sifap/adabas-ddms/).
+> Os 4 DDMs identificados em [`legado-sifap/adabas-ddms/`](legado-sifap/adabas-ddms/): BENEFICIARIO (Arquivo 150), PAGAMENTO (Arquivo 160), PROGRAMA-SOCIAL (Arquivo 155), AUDITORIA (Arquivo 170).
 
-## Tabela de Dependências
+## Tabela de Dependências (15 / 15 programas)
 
-| Programa     | Chama (CALLNAT) | Lê (READ) DDMs | Escreve (STORE/UPDATE) DDMs | Observações |
-| ------------ | --------------- | -------------- | --------------------------- | ----------- |
-| CADBENF.NSN  |                 |                |                             |             |
-| CONBENF.NSN  |                 |                |                             |             |
-| REGPGTO.NSN  |                 |                |                             |             |
-| BATCHPGT.NSN |                 |                |                             |             |
-| CALCBENF.NSN |                 |                |                             |             |
-| VALCPF.NSN   |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
-|              |                 |                |                             |             |
+| Programa      | Chama (CALLNAT/PERFORM) | Lê (READ/FIND) DDMs                       | Escreve (STORE/UPDATE) DDMs    | Observações |
+| ------------- | ----------------------- | ----------------------------------------- | ------------------------------ | ----------- |
+| BATCHPGT.NSN  | CALCBENF, CALCDSCT      | BENEFICIARIO, PROGRAMA-SOCIAL, PAGAMENTO  | PAGAMENTO                      | Crítico — 1º dia útil; ordem CPF acoplada a downstream (MYS-002) |
+| BATCHCON.NSN  | —                       | PAGAMENTO, BENEFICIARIO                   | AUDITORIA                      | Conferência pós-batch |
+| BATCHREL.NSN  | —                       | PAGAMENTO, BENEFICIARIO                   | —                              | Relatório consolidado mensal |
+| CALCBENF.NSN  | (subroutines internas)  | BENEFICIARIO, PROGRAMA-SOCIAL             | —                              | Cálculo central; chamado por BATCHPGT |
+| CALCDSCT.NSN  | (subroutines internas)  | BENEFICIARIO (PE DESCONTOS), PAGAMENTO    | PAGAMENTO                      | Teto 30% exceto judicial |
+| CALCCORR.NSN  | —                       | PAGAMENTO                                 | PAGAMENTO, AUDITORIA           | Correção retroativa — não analisado em profundidade (MYS-003) |
+| CADBENEF.NSN  | VALBENEF, VALDOCS       | BENEFICIARIO                              | BENEFICIARIO, AUDITORIA        | Entrada manual via terminal 3270 |
+| CADPROG.NSN   | —                       | PROGRAMA-SOCIAL                           | PROGRAMA-SOCIAL, AUDITORIA     | Cadastro de programas sociais |
+| CADDEPEND.NSN | —                       | BENEFICIARIO                              | BENEFICIARIO                   | Atualiza NUM-DEPENDENTES (MYS-009) |
+| VALBENEF.NSN  | (subroutines internas)  | BENEFICIARIO                              | —                              | CPF módulo 11, UF, data |
+| VALDOCS.NSN   | —                       | BENEFICIARIO                              | —                              | Documentos do beneficiário |
+| VALELEG.NSN   | —                       | BENEFICIARIO, PROGRAMA-SOCIAL             | —                              | Elegibilidade no programa |
+| CONSBENF.NSN  | —                       | BENEFICIARIO, PAGAMENTO                   | —                              | Consulta online |
+| RELPGT.NSN    | —                       | PAGAMENTO, BENEFICIARIO                   | —                              | Relatório de pagamentos |
+| RELAUDIT.NSN  | —                       | AUDITORIA                                 | —                              | MYS-006 — lógica de auditoria não analisada |
 
 ## Dependências Circulares
 
-> Liste aqui qualquer dependência circular encontrada (programa A chama B que chama A):
+Nenhuma dependência circular encontrada — todas as cadeias `CALLNAT` são acíclicas.
 
-- Nenhuma encontrada até agora.
+## Programas Órfãos / Pontos de Entrada
 
-## Programas Órfãos
-
-> Programas que não são chamados por nenhum outro (possíveis pontos de entrada ou código morto):
-
-- A investigar.
+- **Pontos de entrada batch** (sem caller): `BATCHPGT`, `BATCHCON`, `BATCHREL` — invocados pelo scheduler do mainframe.
+- **Pontos de entrada online** (sem caller): `CADBENEF`, `CADPROG`, `CADDEPEND`, `CONSBENF`, `RELPGT`, `RELAUDIT`, `CALCCORR` — invocados pelo terminal 3270.
+- **Subprogramas** (chamados via CALLNAT): `VALBENEF`, `VALDOCS` (chamados por CADBENEF); `CALCBENF`, `CALCDSCT` (chamados por BATCHPGT).
+- **Sem órfãos** — todos os 15 programas têm pelo menos um chamador (humano via terminal ou scheduler).
 
 ---
 
