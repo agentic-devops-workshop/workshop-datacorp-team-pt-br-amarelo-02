@@ -1,7 +1,6 @@
 # Reference materials cloned by scripts/setup.sh — never commit these.
 # Note: legado-natural/ is bundled with the kit (real folder) and IS committed.
 reference/
-prototype
 infra
 
 # OS files
