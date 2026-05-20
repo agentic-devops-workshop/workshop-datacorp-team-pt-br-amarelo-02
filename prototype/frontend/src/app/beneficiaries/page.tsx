@@ -1,7 +1,12 @@
 async function getBeneficiaries() {
-  const res = await fetch('http://localhost:8080/api/v1/beneficiaries', { cache: 'no-store' })
-  if (!res.ok) return []
-  return res.json()
+  const apiUrl = process.env.API_BASE_URL || 'http://localhost:8080'
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/beneficiaries`, { cache: 'no-store' })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
 }
 
 export default async function BeneficiariesPage() {
